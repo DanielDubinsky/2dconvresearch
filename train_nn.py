@@ -10,6 +10,7 @@
 #                                                                                                                      #
 ########################################################################################################################
 
+import sys
 import torch
 import torch.nn as nn
 import torchvision
@@ -20,7 +21,10 @@ from sacred.observers import MongoObserver
 
 from model_nn import NeuralNet
 
-EXPERIMENT_NAME = 'my_experiment'
+# Get experiment name from command line
+EXPERIMENT_NAME = sys.argv[1]
+del sys.argv[1]
+
 YOUR_CPU = None  # None is the default setting and will result in using localhost, change if you want something else
 DATABASE_NAME = 'my_database'
 
