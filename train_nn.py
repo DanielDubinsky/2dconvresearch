@@ -64,10 +64,11 @@ class Trainer:
 
     # SACRED: Here we do not use any parameters from the config file and hence we do not need the @ex.capture handle.
     def get_datasets(self):
-        train_dataset = torchvision.datasets.MNIST(root='../../data', train=True, transform=transforms.ToTensor(),
+        print("Getting Dataset")
+        train_dataset = torchvision.datasets.MNIST(root='data', train=True, transform=transforms.ToTensor(),
                                                    download=True)
 
-        test_dataset = torchvision.datasets.MNIST(root='../../data', train=False, transform=transforms.ToTensor())
+        test_dataset = torchvision.datasets.MNIST(root='data', train=False, transform=transforms.ToTensor())
 
         return train_dataset, test_dataset
 
