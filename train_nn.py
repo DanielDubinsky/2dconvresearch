@@ -15,11 +15,12 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
+from datasets.MovingMNIST import MovingMNIST
 
 from sacred import Experiment
 from sacred.observers import MongoObserver
 
-from model_nn import NeuralNet
+from model_nn import EncDec
 
 # Get experiment name from command line
 EXPERIMENT_NAME = sys.argv[1]
@@ -43,7 +44,7 @@ class Trainer:
         # later
         self.model = self.make_model()
         self.optimizer = self.make_optimizer()
-        self.loss_fn = nn.CrossEntropyLoss()
+        self.loss_fn = nn.MSELoss()
         self.train_dataset, self.test_dataset = self.get_datasets()
         self.train_loader, self.test_loader = self.get_dataloaders()
 
@@ -52,7 +53,8 @@ class Trainer:
     # method in the init.
     @ex.capture
     def make_model(self, input_size, hidden_size, num_classes):
-        model = NeuralNet(input_size, hidden_size, num_classes).to(device)
+        # model = NeuralNet(input_size, hidden_size, num_classes).to(device)
+        model = EncDec(input_size, hidden_size, kernel_size=(3, 3)).to(device)
         return model
 
     # SACRED: The parameter learning_rate comes from our Sacred config file. Sacred finds this because of the
@@ -64,11 +66,14 @@ class Trainer:
 
     # SACRED: Here we do not use any parameters from the config file and hence we do not need the @ex.capture handle.
     def get_datasets(self):
-        print("Getting Dataset")
-        train_dataset = torchvision.datasets.MNIST(root='data', train=True, transform=transforms.ToTensor(),
-                                                   download=True)
+        to_float = lambda x: x.to(dtype=torch.float32) / 255.0
+        norm = lambda x: (x - 0.1307) / 0.3081
+        t = lambda x: norm(to_float(x))
 
-        test_dataset = torchvision.datasets.MNIST(root='data', train=False, transform=transforms.ToTensor())
+        train_dataset = MovingMNIST('data/MovingMNIST/mnist_test_seq.npy', train=True, download=True,
+                                    transform=t)
+
+        test_dataset = MovingMNIST('data/MovingMNIST/mnist_test_seq.npy', train=False, transform=t)
 
         return train_dataset, test_dataset
 
@@ -95,8 +100,8 @@ class Trainer:
         for epoch in range(num_epochs):
             for i, (images, labels) in enumerate(self.train_loader):
                 # Move tensors to the configured device
-                images = images.reshape(-1, 28 * 28).to(device)
-                labels = labels.to(device)
+                images = images.to(device)
+                labels = labels.to(device, dtype=torch.float32)
 
                 # Forward pass
                 outputs = self.model(images)
@@ -118,15 +123,15 @@ class Trainer:
             correct = 0
             total = 0
             for images, labels in self.test_loader:
-                images = images.reshape(-1, 28 * 28).to(device)
-                labels = labels.to(device)
+                images = images.to(device)
+                labels = labels.to(device, dtype=torch.float32)
                 outputs = self.model(images)
-                _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
-                correct += (predicted == labels).sum().item()
+                mse = torch.mean((outputs - labels) ** 2, (1, 2, 3))
+                correct += (mse < 0.1).sum().item()
 
             accuracy = 100 * correct / total
-            print('Accuracy of the network on the 10000 test images: {} %'.format(accuracy))
+            print('Accuracy of the network on the {} test images: {} %'.format(total, accuracy))
             return accuracy  # SACRED: We return this so that we can add it to our MongoDB
 
     # SACRED: The parameter model_file comes from our Sacred config file. Sacred finds this because of the
@@ -155,11 +160,11 @@ def get_config():
     Now you need to store all your parameters in a function called get_config().
     Put the @ex.config handle above it to ensure that Sacred knows this is the config function it needs to look at.
     """
-    input_size = 784
-    hidden_size = 500
-    num_classes = 10
-    num_epochs = 2  # SACRED: Have a look at train_nn.job for an example of how we can change parameter settings
-    batch_size = 100
+    input_size = 1
+    hidden_size = 32
+    num_classes = 1
+    num_epochs = 50  # SACRED: Have a look at train_nn.job for an example of how we can change parameter settings
+    batch_size = 32
     learning_rate = 0.001
 
     model_file = 'model.ckpt'
