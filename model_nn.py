@@ -51,7 +51,7 @@ class EncDec(nn.Module):
             x = input[:, i]
             h = self.enc(x, h)
 
-        return self.dec(h)
+        return self.dec(h, x)
 
 
 class ConvGRUCell(nn.Module):

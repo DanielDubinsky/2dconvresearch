@@ -66,14 +66,15 @@ class Trainer:
 
     # SACRED: Here we do not use any parameters from the config file and hence we do not need the @ex.capture handle.
     def get_datasets(self):
-        to_float = lambda x: x.to(dtype=torch.float32) / 255.0
-        norm = lambda x: (x - 0.1307) / 0.3081
-        t = lambda x: norm(to_float(x))
+        train_dataset = MovingMNIST('data/MovingMNIST/mnist_test_seq.npy', train=True, download=True,)
+        test_dataset = MovingMNIST('data/MovingMNIST/mnist_test_seq.npy', train=False)
 
-        train_dataset = MovingMNIST('data/MovingMNIST/mnist_test_seq.npy', train=True, download=True,
-                                    transform=t)
+        def to_float(x: torch.Tensor): return x.to(dtype=torch.float32)
+        def norm(x: torch.Tensor): return (x - train_dataset.mean) / train_dataset.std
+        def t(x): return norm(to_float(x))
 
-        test_dataset = MovingMNIST('data/MovingMNIST/mnist_test_seq.npy', train=False, transform=t)
+        train_dataset.transform = t
+        test_dataset.transform = t
 
         return train_dataset, test_dataset
 
