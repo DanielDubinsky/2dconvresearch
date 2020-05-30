@@ -31,19 +31,21 @@ def show_images(images, cols = 1, titles = None):
     plt.show()
 
 
-def draw_predictions(images: torch.Tensor, gt: torch.Tensor, pred: torch.Tensor):
+def draw_predictions(images: torch.Tensor, gt: torch.Tensor, pred: torch.Tensor, denorm=lambda x: x):
     images = images.cpu()
     gt = gt.cpu()
     pred = pred.cpu()
 
     img_list = []
     for i in range(len(images)):
-        img_list.append(torch.squeeze(images[i]).numpy())
+        img_list.append(torch.squeeze(denorm(images[i])).numpy())
 
-    img_list.append(torch.squeeze(gt).numpy())
-    img_list.append(torch.squeeze(pred).numpy())
+    img_list.append(torch.squeeze(denorm(gt)).numpy())
+    img_list.append(torch.squeeze(denorm(pred)).numpy())
 
-    show_images(img_list, titles=[''] * 10 + ['gt', 'pred'])
+    img_list.append((torch.squeeze(gt) - torch.squeeze(pred))**2)
+
+    show_images(img_list, cols=3, titles=[''] * images.size(0) + ['gt', 'pred', "error**2"])
 
 def main():
     parser = argparse.ArgumentParser()
@@ -63,13 +65,15 @@ def main():
 
     dataset.transform = t
 
+    def denorm(x: torch.Tensor): return (x * dataset.std) + dataset.mean
+
     images, gt = dataset[0]
 
     images = images.to(device)
     gt = gt.to(device)
     with torch.no_grad():
         pred = net(torch.unsqueeze(images, 0))
-    draw_predictions(images, gt, pred)
+    draw_predictions(images, gt, pred, denorm=denorm)
 
 
 if __name__ == '__main__':
