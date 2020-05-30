@@ -97,6 +97,7 @@ class Trainer:
     # _run is a special object you can pass to your function and it allows you to keep track of parameters (like we do).
     @ex.capture
     def train(self, num_epochs, _run):
+        self.model.train()
         total_step = len(self.train_loader)
         for epoch in range(num_epochs):
             for i, (images, labels) in enumerate(self.train_loader):
@@ -121,6 +122,7 @@ class Trainer:
 
     def test(self):
         with torch.no_grad():
+            self.model.eval()
             correct = 0
             total = 0
             for images, labels in self.test_loader:
