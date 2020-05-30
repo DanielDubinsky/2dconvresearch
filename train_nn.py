@@ -140,14 +140,15 @@ class Trainer:
     # SACRED: The parameter model_file comes from our Sacred config file. Sacred finds this because of the
     # @ex.capture handle. Note that we did not have to add these parameters when we called this method.
     @ex.capture
-    def run(self, model_file):
+    def run(self, _run):
         # SACRED: we don't need any parameters for train and test, as they're in the config and the functions get a
         # @ex.capture handle later
         self.train()
 
         accuracy = self.test()
 
-        torch.save(self.model.state_dict(), model_file)
+        model_file = f'{_run.experiment_info["name"]}_{_run._id}.pt'
+        torch.save(self.model, model_file)
         print('Model saved in {}'.format(model_file))
 
         return accuracy
@@ -168,9 +169,7 @@ def get_config():
     num_classes = 1
     num_epochs = 50  # SACRED: Have a look at train_nn.job for an example of how we can change parameter settings
     batch_size = 32
-    learning_rate = 0.001
-
-    model_file = 'model.ckpt'
+    learning_rate = 0.0001
 
 
 @ex.main
